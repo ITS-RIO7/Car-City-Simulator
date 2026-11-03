@@ -94,10 +94,16 @@ class DriftSim {
   static const double carRadius = 26;
   static const double _minDriftSpeed = 55;
 
-  /// Distance between the axles, and the lateral acceleration the tyres can
-  /// hold. Together these set how tight the car can turn at a given speed.
-  static const double _wheelBase = 33.5;
+  /// Effective distance between the axles, and the lateral acceleration the
+  /// tyres can hold. Together these set the turning circle: the car is 54 long,
+  /// and this wheelbase gives a 120-unit radius at full lock - about two and a
+  /// half car lengths. A short wheelbase here is what made the car pivot in a
+  /// circle smaller than itself and look like it was spinning.
+  static const double _wheelBase = 110.0;
   static const double _maxLateralAccel = 150.0;
+
+  /// Below this forward speed the car cannot rotate at all.
+  static const double _minRollSpeed = 12.0;
   static const double _driftThresholdAngle = 14 * math.pi / 180;
 
   // ---- world
@@ -543,12 +549,12 @@ class DriftSim {
     // Yaw from a bicycle model: the steering angle gives the geometric turn
     // rate, and the tyre grip budget caps it. That cap is what stops a car at
     // speed from pirouetting the way an unbounded yaw rate did.
-    final vAbs = vLong.abs();
-    if (vAbs > 1.0) {
-      final yawGeom = vAbs * math.tan(steer) / _wheelBase;
-      final yawMax = _maxLateralAccel / vAbs;
-      var yawRate = yawGeom.clamp(-yawMax, yawMax).toDouble();
-      if (vLong < 0) yawRate = -yawRate;
+    // Nothing rotates unless the car is genuinely rolling forwards. This is what
+    // stops a parked car from pirouetting on the spot.
+    if (vLong > _minRollSpeed) {
+      final yawGeom = vLong * math.tan(steer) / _wheelBase;
+      final yawMax = _maxLateralAccel / vLong;
+      final yawRate = yawGeom.clamp(-yawMax, yawMax).toDouble();
       angle += yawRate * dt;
 
       // Self-aligning torque: the nose eases back toward the direction of
@@ -556,7 +562,7 @@ class DriftSim {
       final travel = math.atan2(vel.y, vel.x);
       var diff = travel - angle;
       diff = (diff + math.pi) % (2 * math.pi) - math.pi;
-      angle += (diff * 1.6).clamp(-1.5, 1.5).toDouble() * dt;
+      angle += (diff * 1.0).clamp(-0.9, 0.9).toDouble() * dt;
     }
 
     pos += vel * dt;
