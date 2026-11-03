@@ -8,6 +8,9 @@ import '../models.dart';
 import '../services/storage.dart';
 import 'widgets.dart';
 
+/// Shown in the HUD so the installed build is never in doubt.
+const String kAppVersion = '1.0.5';
+
 /// The run itself: ticker-driven simulation, 3D canvas, HUD and touch controls.
 class GameScreen extends StatefulWidget {
   final AppState state;
@@ -367,10 +370,23 @@ class _Hud extends StatelessWidget {
                     child: _SpeedReadout(speed: hud.speedKph),
                   ),
                   const SizedBox(width: 12),
-                  IconButton(
-                    onPressed: onPause,
-                    icon: const Icon(Icons.pause_circle_filled,
-                        color: Colors.white70, size: 34),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      IconButton(
+                        onPressed: onPause,
+                        icon: const Icon(Icons.pause_circle_filled,
+                            color: Colors.white70, size: 34),
+                      ),
+                      Text(
+                        'v$kAppVersion',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.35),
+                          fontSize: 9,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -385,7 +401,7 @@ class _Hud extends StatelessWidget {
                     'angle ${(sim.angle * 180 / 3.14159).toStringAsFixed(1)}°\n'
                     'steer ${sim.steer.toStringAsFixed(3)}  '
                     'vLong ${sim.vel.x.toStringAsFixed(0)}\n'
-                    'speed ${sim.speed.toStringAsFixed(1)}',
+                    'speed ${sim.speed.toStringAsFixed(1)}  v$kAppVersion',
                     style: const TextStyle(
                       color: Color(0xFF7CF5A0),
                       fontSize: 11,

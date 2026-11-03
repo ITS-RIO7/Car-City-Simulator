@@ -104,6 +104,9 @@ class DriftSim {
 
   /// Below this forward speed the car cannot rotate at all.
   static const double _minRollSpeed = 12.0;
+
+  /// Absolute ceiling on yaw rate, as a last line of defence.
+  static const double _maxYawRate = 1.2;
   static const double _driftThresholdAngle = 14 * math.pi / 180;
 
   // ---- world
@@ -551,6 +554,7 @@ class DriftSim {
     // speed from pirouetting the way an unbounded yaw rate did.
     // Nothing rotates unless the car is genuinely rolling forwards. This is what
     // stops a parked car from pirouetting on the spot.
+    final angleBefore = angle;
     if (vLong > _minRollSpeed) {
       final yawGeom = vLong * math.tan(steer) / _wheelBase;
       final yawMax = _maxLateralAccel / vLong;
@@ -563,6 +567,15 @@ class DriftSim {
       var diff = travel - angle;
       diff = (diff + math.pi) % (2 * math.pi) - math.pi;
       angle += (diff * 1.0).clamp(-0.9, 0.9).toDouble() * dt;
+    }
+
+    // Hard ceiling on how far the car can rotate in one step. Whatever the
+    // model computes, the body can never whip round: at 1.2 rad/s a full turn
+    // takes 5.2 seconds.
+    final delta = angle - angleBefore;
+    final limit = _maxYawRate * dt;
+    if (delta.abs() > limit) {
+      angle = angleBefore + (delta < 0 ? -limit : limit);
     }
 
     pos += vel * dt;
