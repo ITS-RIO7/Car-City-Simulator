@@ -9,7 +9,7 @@ import '../services/storage.dart';
 import 'widgets.dart';
 
 /// Shown in the HUD so the installed build is never in doubt.
-const String kAppVersion = '1.0.5';
+const String kAppVersion = '1.0.6';
 
 /// The run itself: ticker-driven simulation, 3D canvas, HUD and touch controls.
 class GameScreen extends StatefulWidget {
@@ -401,7 +401,9 @@ class _Hud extends StatelessWidget {
                     'angle ${(sim.angle * 180 / 3.14159).toStringAsFixed(1)}°\n'
                     'steer ${sim.steer.toStringAsFixed(3)}  '
                     'vLong ${sim.vel.x.toStringAsFixed(0)}\n'
-                    'speed ${sim.speed.toStringAsFixed(1)}  v$kAppVersion',
+                    'speed ${sim.speed.toStringAsFixed(1)}  v$kAppVersion\n'
+                    'yaw ${(sim.yawRate * 57.3).toStringAsFixed(1)}°/s  '
+                    'max ${(sim.maxYawSeen * 57.3).toStringAsFixed(1)}°/s',
                     style: const TextStyle(
                       color: Color(0xFF7CF5A0),
                       fontSize: 11,

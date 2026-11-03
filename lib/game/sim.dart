@@ -78,6 +78,8 @@ class DriftSim {
   double combo = 0;
   double comboTimer = 0;
   double driftAngle = 0;
+  double yawRate = 0;
+  double maxYawSeen = 0;
   double speed = 0;
   String lastApex = '';
   double apexFlash = 0;
@@ -558,8 +560,8 @@ class DriftSim {
     if (vLong > _minRollSpeed) {
       final yawGeom = vLong * math.tan(steer) / _wheelBase;
       final yawMax = _maxLateralAccel / vLong;
-      final yawRate = yawGeom.clamp(-yawMax, yawMax).toDouble();
-      angle += yawRate * dt;
+      final yawNow = yawGeom.clamp(-yawMax, yawMax).toDouble();
+      angle += yawNow * dt;
 
       // Self-aligning torque: the nose eases back toward the direction of
       // travel, so a slide can always be caught instead of spinning forever.
@@ -577,6 +579,8 @@ class DriftSim {
     if (delta.abs() > limit) {
       angle = angleBefore + (delta < 0 ? -limit : limit);
     }
+    yawRate = dt > 0 ? (angle - angleBefore) / dt : 0;
+    if (yawRate.abs() > maxYawSeen.abs()) maxYawSeen = yawRate;
 
     pos += vel * dt;
 
