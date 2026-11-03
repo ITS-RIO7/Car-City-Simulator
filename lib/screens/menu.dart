@@ -33,20 +33,20 @@ class HomeScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
                           const Text(
-                            'DRIFT',
+                            'CAR CITY',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 52,
+                              fontSize: 46,
                               height: 0.92,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: 6,
+                              letterSpacing: 4,
                             ),
                           ),
                           const Text(
-                            'HORIZON',
+                            'SIMULATOR',
                             style: TextStyle(
                               color: Color(0xFF00E5FF),
-                              fontSize: 52,
+                              fontSize: 46,
                               height: 0.92,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 6,
@@ -54,7 +54,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            'High-octane arcade drift racing',
+                            'High-octane arcade drift racing through a neon city',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.55),
                               fontSize: 13,

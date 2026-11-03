@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'screens/menu.dart';
 import 'services/storage.dart';
 
-/// Drift Horizon — a Flutter port of the Kotlin/Compose original.
+/// Car City Simulator — arcade drift racing through a neon city.
 ///
 /// The game is landscape-only, like the Android build it replaces.
 void main() {
@@ -36,7 +36,7 @@ class _DriftHorizonAppState extends State<DriftHorizonApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Drift Horizon',
+      title: 'Car City Simulator',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

@@ -1,6 +1,7 @@
-# Drift Horizon — Flutter port
+# Car City Simulator
 
-The Kotlin/Compose game in this repository, rebuilt in Flutter. The original
+Arcade drift racing through a neon city. This branch is the Flutter port of the
+Kotlin/Compose game that lives on `main`. The original
 sources are still here (under `app/`, untouched) so nothing is lost while the
 port is validated.
 

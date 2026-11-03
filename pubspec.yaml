@@ -1,5 +1,5 @@
 name: drift_horizon
-description: Drift Horizon - Flutter port of the Kotlin/Compose drift racing game.
+description: Car City Simulator - arcade drift racing through a neon city.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -16,6 +16,15 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#0A1020"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  min_sdk_android: 21
 
 flutter:
   uses-material-design: true
