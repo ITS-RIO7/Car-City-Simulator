@@ -65,6 +65,7 @@ class DriftSim {
   vm.Vector2 vel = vm.Vector2.zero();
   double angle = 0;
   double steer = 0;
+  double _steerInput = 0;
   double throttle = 0;
   double brakeInput = 0;
   double nosAmount = 1.0;
@@ -470,13 +471,10 @@ class DriftSim {
     required double brakeAmount,
     required bool nos,
   }) {
+    _steerInput = steerInput.clamp(-1.0, 1.0).toDouble();
     throttle = throttleInput;
     brakeInput = brakeAmount;
     nosActive = nos;
-    // Steering eases toward the requested angle instead of snapping.
-    final maxSteer = 0.58 * car.handling;
-    final target = steerInput * maxSteer;
-    steer += (target - steer) * 0.35;
   }
 
   void update(double dt) {
@@ -492,6 +490,12 @@ class DriftSim {
         return;
       }
     }
+
+    // Steering eases toward the requested angle. Using an exponential decay
+    // keeps the feel identical at 30 and 60 FPS.
+    final maxSteer = 0.58 * car.handling;
+    final steerTarget = _steerInput * maxSteer;
+    steer += (steerTarget - steer) * (1 - math.exp(-14 * dt));
 
     final cosA = math.cos(angle);
     final sinA = math.sin(angle);
@@ -518,22 +522,45 @@ class DriftSim {
     if (vLong > top) vLong = top;
     if (vLong < -top * 0.3) vLong = -top * 0.3;
 
-    // Lateral grip: lower grip while on the throttle keeps slides alive.
-    final grip = 7.5 * car.gripBalance * (1.0 - 0.12 * car.driftFactor);
+    // Lateral grip: sideways speed bleeds off, but slowly enough to slide.
+    final grip = 5.5 * car.gripBalance * (1.0 - 0.10 * car.driftFactor);
     vLat -= vLat * grip * dt;
 
-    // Yaw.
     speed = math.sqrt(vLong * vLong + vLat * vLat);
-    final speedFactor = (speed / 220).clamp(0.0, 1.0).toDouble();
-    final direction = vLong >= 0 ? 1.0 : -1.0;
-    final yawRate =
-        (steer * 4.2 * car.handling * speedFactor * direction).clamp(-2.2, 2.2).toDouble();
-    angle += yawRate * dt;
 
-    // Recompose and integrate.
+    // Recompose the world velocity using the heading the components were
+    // measured against. Rotating them by the new angle would drag the velocity
+    // round with the nose and make the car pivot on the spot.
     final c2 = math.cos(angle);
     final s2 = math.sin(angle);
     vel = vm.Vector2(vLong * c2 - vLat * s2, vLong * s2 + vLat * c2);
+
+    final speedT = (speed / car.topSpeed).clamp(0.0, 1.0).toDouble();
+
+    // A car that is not moving cannot rotate.
+    if (speed > 8) {
+      final direction = vLong >= 0 ? 1.0 : -1.0;
+      // Steering authority falls away with speed, so full lock at top speed
+      // can no longer pirouette the car.
+      final authority = (1.0 - 0.55 * speedT).clamp(0.30, 1.0).toDouble();
+      final yawRate =
+          (steer * 4.2 * car.handling * (0.35 + 0.65 * speedT) * direction * authority)
+              .clamp(-1.9, 1.9)
+              .toDouble();
+      angle += yawRate * dt;
+
+      // Self-aligning torque: the nose eases back toward the direction of
+      // travel. This is what stops one slide from becoming an endless spin.
+      final travel = math.atan2(vel.y, vel.x);
+      var diff = travel - angle;
+      diff = (diff + math.pi) % (2 * math.pi) - math.pi;
+      final align = (0.85 * speedT).clamp(0.0, 1.0).toDouble();
+      angle += (diff * align * 2.2).clamp(-2.0, 2.0).toDouble() * dt;
+    } else {
+      // Creeping to a halt: kill the residual slide so nothing drifts on.
+      vel = vm.Vector2.zero();
+    }
+
     pos += vel * dt;
 
     _keepOnRoad();
