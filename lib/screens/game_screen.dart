@@ -33,6 +33,7 @@ class _GameScreenState extends State<GameScreen>
   Duration _last = Duration.zero;
   bool _paused = false;
   bool _resultShown = false;
+  bool _diag = false;
 
   // Control state, set by the on-screen buttons.
   double _steer = 0;
@@ -177,7 +178,14 @@ class _GameScreenState extends State<GameScreen>
                   willChange: true,
                 ),
               ),
-              _Hud(hud: hud, track: widget.track, sim: _sim, onPause: _togglePause),
+              _Hud(
+                hud: hud,
+                track: widget.track,
+                sim: _sim,
+                onPause: _togglePause,
+                diag: _diag,
+                onToggleDiag: () => setState(() => _diag = !_diag),
+              ),
               _Controls(
                 leftHanded: leftHanded,
                 onSteer: (v) => _steer = v,
@@ -213,12 +221,16 @@ class _Hud extends StatelessWidget {
   final Track track;
   final DriftSim sim;
   final VoidCallback onPause;
+  final bool diag;
+  final VoidCallback onToggleDiag;
 
   const _Hud({
     required this.hud,
     required this.track,
     required this.sim,
     required this.onPause,
+    required this.diag,
+    required this.onToggleDiag,
   });
 
   @override
@@ -350,7 +362,10 @@ class _Hud extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  _SpeedReadout(speed: hud.speedKph),
+                  GestureDetector(
+                    onTap: onToggleDiag,
+                    child: _SpeedReadout(speed: hud.speedKph),
+                  ),
                   const SizedBox(width: 12),
                   IconButton(
                     onPressed: onPause,
@@ -360,6 +375,26 @@ class _Hud extends StatelessWidget {
                 ],
               ),
             ),
+
+            if (diag)
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 96),
+                  child: Text(
+                    'angle ${(sim.angle * 180 / 3.14159).toStringAsFixed(1)}°\n'
+                    'steer ${sim.steer.toStringAsFixed(3)}  '
+                    'vLong ${sim.vel.x.toStringAsFixed(0)}\n'
+                    'speed ${sim.speed.toStringAsFixed(1)}',
+                    style: const TextStyle(
+                      color: Color(0xFF7CF5A0),
+                      fontSize: 11,
+                      height: 1.5,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              ),
 
             // Mini map, bottom centre.
             Align(

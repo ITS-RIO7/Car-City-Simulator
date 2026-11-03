@@ -93,6 +93,11 @@ class DriftSim {
   static const double carWidth = 28;
   static const double carRadius = 26;
   static const double _minDriftSpeed = 55;
+
+  /// Distance between the axles, and the lateral acceleration the tyres can
+  /// hold. Together these set how tight the car can turn at a given speed.
+  static const double _wheelBase = 33.5;
+  static const double _maxLateralAccel = 150.0;
   static const double _driftThresholdAngle = 14 * math.pi / 180;
 
   // ---- world
@@ -491,8 +496,8 @@ class DriftSim {
       }
     }
 
-    // Steering eases toward the requested angle. Using an exponential decay
-    // keeps the feel identical at 30 and 60 FPS.
+    // Steering eases toward the requested angle. An exponential decay keeps
+    // the feel identical at 30 and 60 FPS.
     final maxSteer = 0.58 * car.handling;
     final steerTarget = _steerInput * maxSteer;
     steer += (steerTarget - steer) * (1 - math.exp(-14 * dt));
@@ -535,30 +540,23 @@ class DriftSim {
     final s2 = math.sin(angle);
     vel = vm.Vector2(vLong * c2 - vLat * s2, vLong * s2 + vLat * c2);
 
-    final speedT = (speed / car.topSpeed).clamp(0.0, 1.0).toDouble();
-
-    // A car that is not moving cannot rotate.
-    if (speed > 8) {
-      final direction = vLong >= 0 ? 1.0 : -1.0;
-      // Steering authority falls away with speed, so full lock at top speed
-      // can no longer pirouette the car.
-      final authority = (1.0 - 0.55 * speedT).clamp(0.30, 1.0).toDouble();
-      final yawRate =
-          (steer * 4.2 * car.handling * (0.35 + 0.65 * speedT) * direction * authority)
-              .clamp(-1.9, 1.9)
-              .toDouble();
+    // Yaw from a bicycle model: the steering angle gives the geometric turn
+    // rate, and the tyre grip budget caps it. That cap is what stops a car at
+    // speed from pirouetting the way an unbounded yaw rate did.
+    final vAbs = vLong.abs();
+    if (vAbs > 1.0) {
+      final yawGeom = vAbs * math.tan(steer) / _wheelBase;
+      final yawMax = _maxLateralAccel / vAbs;
+      var yawRate = yawGeom.clamp(-yawMax, yawMax).toDouble();
+      if (vLong < 0) yawRate = -yawRate;
       angle += yawRate * dt;
 
       // Self-aligning torque: the nose eases back toward the direction of
-      // travel. This is what stops one slide from becoming an endless spin.
+      // travel, so a slide can always be caught instead of spinning forever.
       final travel = math.atan2(vel.y, vel.x);
       var diff = travel - angle;
       diff = (diff + math.pi) % (2 * math.pi) - math.pi;
-      final align = (0.85 * speedT).clamp(0.0, 1.0).toDouble();
-      angle += (diff * align * 2.2).clamp(-2.0, 2.0).toDouble() * dt;
-    } else {
-      // Creeping to a halt: kill the residual slide so nothing drifts on.
-      vel = vm.Vector2.zero();
+      angle += (diff * 1.6).clamp(-1.5, 1.5).toDouble() * dt;
     }
 
     pos += vel * dt;

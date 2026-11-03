@@ -46,6 +46,12 @@ publishes the APK to a GitHub Release.
 
 ## Changelog
 
+- 1.0.3: real fix for the spin. Yaw now comes from a bicycle model
+  (`yaw = v * tan(steer) / wheelbase`) capped by the tyre grip budget
+  (`150 / v`), so a car at speed can no longer rotate faster than its tyres
+  allow. The 1.0.2 low-speed gate that zeroed the velocity is gone - it had
+  stopped the car from moving at all. Tapping the speed readout shows a live
+  angle / steer / speed readout for diagnosis.
 - 1.0.2: fixed the car spinning on the spot. The world velocity is now
   recomposed against the heading it was measured in (it used to be dragged
   round with the nose), a stationary car can no longer rotate, steering
