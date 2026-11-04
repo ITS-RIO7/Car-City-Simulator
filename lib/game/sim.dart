@@ -80,6 +80,7 @@ class DriftSim {
   double driftAngle = 0;
   double yawRate = 0;
   double maxYawSeen = 0;
+  double angularVelocity = 0;
   double speed = 0;
   String lastApex = '';
   double apexFlash = 0;
@@ -109,6 +110,10 @@ class DriftSim {
 
   /// Absolute ceiling on yaw rate, as a last line of defence.
   static const double _maxYawRate = 1.2;
+
+  /// How quickly the angular velocity chases its target, in 1/s. Higher is
+  /// snappier, lower is floatier.
+  static const double _angularDamping = 6.0;
   static const double _driftThresholdAngle = 14 * math.pi / 180;
 
   // ---- world
@@ -554,32 +559,39 @@ class DriftSim {
     // Yaw from a bicycle model: the steering angle gives the geometric turn
     // rate, and the tyre grip budget caps it. That cap is what stops a car at
     // speed from pirouetting the way an unbounded yaw rate did.
-    // Nothing rotates unless the car is genuinely rolling forwards. This is what
-    // stops a parked car from pirouetting on the spot.
-    final angleBefore = angle;
+    // ---- rotation is a real angular velocity that is damped, not a position
+    // snap. This is the Dart equivalent of a Rigidbody's angularVelocity plus
+    // angularDamping: the body eases toward the rate the tyres allow.
+    var targetYaw = 0.0;
     if (vLong > _minRollSpeed) {
       final yawGeom = vLong * math.tan(steer) / _wheelBase;
       final yawMax = _maxLateralAccel / vLong;
-      final yawNow = yawGeom.clamp(-yawMax, yawMax).toDouble();
-      angle += yawNow * dt;
+      targetYaw = yawGeom.clamp(-yawMax, yawMax).toDouble();
 
       // Self-aligning torque: the nose eases back toward the direction of
       // travel, so a slide can always be caught instead of spinning forever.
       final travel = math.atan2(vel.y, vel.x);
       var diff = travel - angle;
       diff = (diff + math.pi) % (2 * math.pi) - math.pi;
-      angle += (diff * 1.0).clamp(-0.9, 0.9).toDouble() * dt;
+      targetYaw += (diff * 1.0).clamp(-0.9, 0.9).toDouble();
+    } else {
+      // Standing still: kill the angular velocity outright so the car can never
+      // rotate in place.
+      angularVelocity = 0;
     }
 
-    // Hard ceiling on how far the car can rotate in one step. Whatever the
-    // model computes, the body can never whip round: at 1.2 rad/s a full turn
-    // takes 5.2 seconds.
-    final delta = angle - angleBefore;
-    final limit = _maxYawRate * dt;
-    if (delta.abs() > limit) {
-      angle = angleBefore + (delta < 0 ? -limit : limit);
+    // Exponential damping toward the target rate (frame-rate independent).
+    angularVelocity +=
+        (targetYaw - angularVelocity) * (1 - math.exp(-_angularDamping * dt));
+    angularVelocity = angularVelocity.clamp(-_maxYawRate, _maxYawRate).toDouble();
+
+    // No steering input and almost stopped: no residual spin.
+    if (_steerInput.abs() < 0.02 && vLong < _minRollSpeed * 2) {
+      angularVelocity *= 0.5;
     }
-    yawRate = dt > 0 ? (angle - angleBefore) / dt : 0;
+
+    angle += angularVelocity * dt;
+    yawRate = angularVelocity;
     if (yawRate.abs() > maxYawSeen.abs()) maxYawSeen = yawRate;
 
     pos += vel * dt;

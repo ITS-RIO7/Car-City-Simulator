@@ -9,7 +9,7 @@ import '../services/storage.dart';
 import 'widgets.dart';
 
 /// Shown in the HUD so the installed build is never in doubt.
-const String kAppVersion = '1.0.6';
+const String kAppVersion = '1.0.7';
 
 /// The run itself: ticker-driven simulation, 3D canvas, HUD and touch controls.
 class GameScreen extends StatefulWidget {
@@ -55,13 +55,20 @@ class _GameScreenState extends State<GameScreen>
     _ticker = createTicker(_onTick)..start();
   }
 
+  /// Physics runs on a fixed step, independent of the display refresh rate.
+  /// This is the Flutter equivalent of Unity's FixedUpdate: a slow frame runs
+  /// several steps, a fast frame runs none, and the simulation always advances
+  /// by the same amount, so nothing jitters between devices.
+  static const double _fixedStep = 1 / 120;
+  double _accumulator = 0;
+
   void _onTick(Duration elapsed) {
     if (_paused) {
       _last = elapsed;
       return;
     }
-    final dt = _last == Duration.zero
-        ? 0.016
+    final frameDt = _last == Duration.zero
+        ? 0.0
         : (elapsed - _last).inMicroseconds / 1000000.0;
     _last = elapsed;
 
@@ -72,7 +79,17 @@ class _GameScreenState extends State<GameScreen>
       brakeAmount: _brake,
       nos: _nos,
     );
-    _sim.update(dt);
+
+    // Cap the backlog so a stall (or a phone waking up) can never trigger a
+    // burst of catch-up steps.
+    _accumulator += frameDt.clamp(0.0, 0.1).toDouble();
+    var steps = 0;
+    while (_accumulator >= _fixedStep && steps < 12) {
+      _sim.update(_fixedStep);
+      _accumulator -= _fixedStep;
+      steps++;
+      if (_sim.isOver) break;
+    }
     _frame.value++;
 
     if (_sim.isOver && !_resultShown) {
@@ -92,6 +109,7 @@ class _GameScreenState extends State<GameScreen>
       _resultShown = false;
       _paused = false;
       _last = Duration.zero;
+      _accumulator = 0;
       _steer = 0;
       _throttle = 0;
       _brake = 0;
